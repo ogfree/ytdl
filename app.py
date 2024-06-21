@@ -1,8 +1,10 @@
 from flask import Flask, jsonify, request, send_from_directory, redirect, Response
 from pytube import YouTube
+from flask_cors import CORS
 import os
 
 app = Flask(__name__, static_folder='public')
+CORS(app)  # Enable CORS for all routes
 
 # Serve index.html from the 'public' directory
 @app.route('/')
@@ -74,6 +76,11 @@ def get_download_url():
         return jsonify({'download_url': download_url})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+# Health check route
+@app.route('/health', methods=['GET'])
+def health():
+    return 'OK', 200
 
 if __name__ == '__main__':
     app.run(debug=True)
