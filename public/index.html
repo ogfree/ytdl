@@ -39,9 +39,8 @@
                 data.formats.forEach(format => {
                     const listItem = document.createElement('li');
                     const link = document.createElement('a');
-                    link.href = `/download?videoUrl=${encodeURIComponent(url)}&formatId=${format.format_id}`;
+                    link.href = `/getDownloadUrl?videoUrl=${encodeURIComponent(url)}&formatId=${format.format_id}`;
                     link.textContent = `${format.format_note} (${(format.filesize / (1024 * 1024)).toFixed(2)} MB)`;
-                    link.download = `${data.title}.mp4`;
                     listItem.appendChild(link);
                     qualityList.appendChild(listItem);
                 });
