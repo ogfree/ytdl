@@ -2,6 +2,8 @@ const express = require('express');
 const youtubedl = require('youtube-dl-exec');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
+const { promisify } = require('util');
 
 const app = express();
 app.use(cors());
@@ -24,7 +26,7 @@ app.post('/getQualities', async (req, res) => {
             format_note: format.format_note,
             filesize: format.filesize,
             ext: format.ext,
-        })).filter(format => format.format_note && format.ext === 'mp4'); // Adjust the filter as needed
+        })).filter(format => format.format_note && format.ext === 'mp4');
 
         res.json({ title: info.title, formats });
     } catch (error) {
@@ -40,24 +42,36 @@ app.get('/download', async (req, res) => {
     }
 
     try {
-        const info = await youtubedl(videoUrl, {
+        const result = await youtubedl(videoUrl, {
             format: formatId,
-            getFilename: true,
+            noCheckCertificate: true,
+            quiet: true,
+            noWarnings: true,
         });
 
-        const filename = info;
+        const filename = `${result.title}.${result.ext}`;
+        const filePath = path.resolve(__dirname, 'downloads', filename);
 
         res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
         res.setHeader('Content-Type', 'video/mp4');
 
-        const downloadStream = youtubedl(videoUrl, { format: formatId }).stdout;
-        downloadStream.pipe(res);
+        result.stdout.pipe(fs.createWriteStream(filePath));
 
-        downloadStream.on('end', () => {
-            res.end();
+        result.on('end', async () => {
+            await promisify(fs.access)(filePath, fs.constants.F_OK);
+            const fileStream = fs.createReadStream(filePath);
+            fileStream.pipe(res);
+
+            fileStream.on('end', async () => {
+                await promisify(fs.unlink)(filePath);
+            });
+
+            fileStream.on('error', (error) => {
+                res.status(500).send('Error downloading video');
+            });
         });
 
-        downloadStream.on('error', (error) => {
+        result.on('error', (error) => {
             res.status(500).send('Error downloading video');
         });
 
