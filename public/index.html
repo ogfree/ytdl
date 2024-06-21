@@ -83,12 +83,32 @@
             }
         });
 
-        document.getElementById('downloadButton').addEventListener('click', function() {
+        document.getElementById('downloadButton').addEventListener('click', async function() {
             const selectedOption = document.getElementById('formatSelect').value;
             const [type, itag] = selectedOption.split('-');
+            const videoUrl = document.getElementById('videoUrl').value;
 
-            const downloadUrl = `/getDownloadUrl?videoUrl=${encodeURIComponent(document.getElementById('videoUrl').value)}&itag=${itag}`;
-            window.location.href = downloadUrl;
+            try {
+                const response = await fetch(`/getDownloadUrl?videoUrl=${encodeURIComponent(videoUrl)}&itag=${itag}`);
+                const data = await response.json();
+
+                if (response.ok) {
+                    const downloadUrl = data.download_url;
+
+                    // Create a temporary <a> element and initiate download
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = downloadUrl;
+                    a.download = `${data.title}.${data.extension}`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                } else {
+                    alert(`Error: ${data.error}`);
+                }
+            } catch (error) {
+                alert(`Error: ${error.message}`);
+            }
         });
     </script>
 </body>
