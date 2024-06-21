@@ -128,9 +128,11 @@
                 }
                 const a = document.createElement('a');
                 a.href = data.download_url;
-                a.target = '_blank';
-                a.download = '';
+                a.setAttribute('download', '');
+                a.style.display = 'none';
+                document.body.appendChild(a);
                 a.click();
+                document.body.removeChild(a);
             })
             .catch(error => {
                 document.getElementById('error').textContent = 'An error occurred: ' + error.message;
