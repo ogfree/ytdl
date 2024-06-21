@@ -22,12 +22,11 @@ def get_qualities():
         title = yt.title
         
         # Get all streams
-        streams = yt.streams.all()
+        streams = yt.streams
 
         # Filter video streams (MP4)
-        video_streams = streams.filter(file_extension='mp4').all()
         video_formats = []
-        for stream in video_streams:
+        for stream in streams.filter(file_extension='mp4'):
             video_formats.append({
                 'itag': stream.itag,
                 'resolution': stream.resolution,
@@ -37,9 +36,8 @@ def get_qualities():
             })
 
         # Filter audio streams (MP4 and WebM)
-        audio_streams = streams.filter(type='audio').all()
         audio_formats = []
-        for stream in audio_streams:
+        for stream in streams.filter(type='audio'):
             audio_formats.append({
                 'itag': stream.itag,
                 'abr': stream.abr,
