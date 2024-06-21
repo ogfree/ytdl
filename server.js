@@ -37,7 +37,7 @@ app.post('/getQualities', async (req, res) => {
     }
 });
 
-app.get('/download', async (req, res) => {
+app.get('/getDownloadUrl', async (req, res) => {
     const { videoUrl, formatId } = req.query;
 
     if (!videoUrl || !formatId) {
@@ -55,25 +55,31 @@ app.get('/download', async (req, res) => {
         const filename = `${result.title}.${result.ext}`;
         const filePath = path.resolve(__dirname, 'downloads', filename);
 
-        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-        res.setHeader('Content-Type', 'video/mp4');
-
-        const fileStream = fs.createReadStream(filePath);
-        fileStream.pipe(res);
-
-        fileStream.on('end', async () => {
-            await promisify(fs.unlink)(filePath);
-        });
-
-        fileStream.on('error', (error) => {
-            console.error('Error reading video file:', error);
-            res.status(500).send('Error streaming video');
-        });
-
+        res.json({ downloadUrl: `/download/${encodeURIComponent(filename)}` });
     } catch (error) {
         console.error('Error downloading video:', error);
         res.status(500).send('Error downloading video');
     }
+});
+
+app.get('/download/:filename', async (req, res) => {
+    const filename = decodeURIComponent(req.params.filename);
+    const filePath = path.resolve(__dirname, 'downloads', filename);
+
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Type', 'video/mp4');
+
+    const fileStream = fs.createReadStream(filePath);
+    fileStream.pipe(res);
+
+    fileStream.on('end', async () => {
+        await promisify(fs.unlink)(filePath);
+    });
+
+    fileStream.on('error', (error) => {
+        console.error('Error reading video file:', error);
+        res.status(500).send('Error streaming video');
+    });
 });
 
 const port = process.env.PORT || 3000;
