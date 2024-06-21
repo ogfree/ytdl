@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, send_from_directory, redirect, Response
+from flask import Flask, jsonify, request, send_from_directory, redirect
 from pytube import YouTube
 import os
 
@@ -70,16 +70,7 @@ def get_download_url():
             return jsonify({'error': 'Stream not found'}), 404
 
         download_url = stream.url
-
-        # Get filename from the URL
-        filename = download_url.split('/')[-1]
-        
-        # Set response headers to force download
-        response = Response()
-        response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
-        response.headers['X-Accel-Redirect'] = download_url
-        
-        return response
+        return redirect(download_url)  # Redirect to the actual video file URL
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
