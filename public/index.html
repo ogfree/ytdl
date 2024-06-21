@@ -4,68 +4,91 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>YouTube Video Downloader</title>
-    <link rel="stylesheet" href="styles.css"> <!-- Optional: Link to custom styles -->
 </head>
 <body>
     <h1>YouTube Video Downloader</h1>
-    <form id="urlForm">
-        <label for="url">YouTube Video URL:</label>
-        <input type="text" id="url" name="url" required>
-        <button type="submit">Get Qualities</button>
+    <form id="videoForm">
+        <label for="videoUrl">Enter YouTube Video URL:</label><br>
+        <input type="text" id="videoUrl" name="videoUrl" required><br><br>
+        <button type="submit">Get Video Details</button>
     </form>
 
-    <div id="qualities" style="display: none;">
-        <h2>Select Quality</h2>
-        <h3>Video Formats</h3>
-        <ul id="videoList"></ul>
-        <h3>Audio Formats</h3>
-        <ul id="audioList"></ul>
+    <div id="videoDetails" style="display: none;">
+        <h2>Video Details</h2>
+        <p><strong>Title:</strong> <span id="title"></span></p>
+
+        <h3>Video Formats:</h3>
+        <ul id="videoFormats"></ul>
+
+        <h3>Audio Formats:</h3>
+        <ul id="audioFormats"></ul>
+
+        <h3>Select Format to Download:</h3>
+        <select id="formatSelect"></select>
+        <br><br>
+        <button id="downloadButton">Download Selected Format</button>
     </div>
 
-    <script src="script.js"></script> <!-- Optional: Link to custom scripts -->
     <script>
-        document.getElementById('urlForm').addEventListener('submit', async function (e) {
-            e.preventDefault();
-            const url = document.getElementById('url').value;
+        document.getElementById('videoForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            
+            const videoUrl = document.getElementById('videoUrl').value;
             const response = await fetch('/getQualities', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ url })
+                body: JSON.stringify({ url: videoUrl })
             });
 
+            const data = await response.json();
+
             if (response.ok) {
-                const data = await response.json();
-                const videoList = document.getElementById('videoList');
-                const audioList = document.getElementById('audioList');
-                videoList.innerHTML = '';
-                audioList.innerHTML = '';
+                document.getElementById('title').textContent = data.title;
+
+                const videoFormatsList = document.getElementById('videoFormats');
+                const audioFormatsList = document.getElementById('audioFormats');
+                const formatSelect = document.getElementById('formatSelect');
+
+                videoFormatsList.innerHTML = '';
+                audioFormatsList.innerHTML = '';
+                formatSelect.innerHTML = '';
 
                 data.video_formats.forEach(format => {
-                    const listItem = document.createElement('li');
-                    const link = document.createElement('a');
-                    link.href = `/getDownloadUrl?videoUrl=${encodeURIComponent(url)}&itag=${format.itag}`;
-                    link.textContent = `${format.resolution} - ${format.mime_type} (${(format.file_size / (1024 * 1024)).toFixed(2)} MB)`;
-                    link.setAttribute('download', ''); // Add download attribute to force download
-                    listItem.appendChild(link);
-                    videoList.appendChild(listItem);
+                    const li = document.createElement('li');
+                    li.textContent = `${format.resolution} - ${format.mime_type}`;
+                    videoFormatsList.appendChild(li);
+
+                    const option = document.createElement('option');
+                    option.value = `video-${format.itag}`;
+                    option.textContent = `${format.resolution} - ${format.mime_type}`;
+                    formatSelect.appendChild(option);
                 });
 
                 data.audio_formats.forEach(format => {
-                    const listItem = document.createElement('li');
-                    const link = document.createElement('a');
-                    link.href = `/getDownloadUrl?videoUrl=${encodeURIComponent(url)}&itag=${format.itag}`;
-                    link.textContent = `Audio - ${format.abr}kbps (${(format.file_size / (1024 * 1024)).toFixed(2)} MB)`;
-                    link.setAttribute('download', ''); // Add download attribute to force download
-                    listItem.appendChild(link);
-                    audioList.appendChild(listItem);
+                    const li = document.createElement('li');
+                    li.textContent = `${format.abr} - ${format.mime_type}`;
+                    audioFormatsList.appendChild(li);
+
+                    const option = document.createElement('option');
+                    option.value = `audio-${format.itag}`;
+                    option.textContent = `${format.abr} - ${format.mime_type}`;
+                    formatSelect.appendChild(option);
                 });
 
-                document.getElementById('qualities').style.display = 'block';
+                document.getElementById('videoDetails').style.display = 'block';
             } else {
-                alert('Error fetching video qualities');
+                alert(`Error: ${data.error}`);
             }
+        });
+
+        document.getElementById('downloadButton').addEventListener('click', function() {
+            const selectedOption = document.getElementById('formatSelect').value;
+            const [type, itag] = selectedOption.split('-');
+
+            const downloadUrl = `/getDownloadUrl?videoUrl=${encodeURIComponent(document.getElementById('videoUrl').value)}&itag=${itag}`;
+            window.location.href = downloadUrl;
         });
     </script>
 </body>
