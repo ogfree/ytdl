@@ -3,112 +3,123 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YouTube Video Downloader</title>
+    <title>YouTube Downloader</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        #container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+        }
+        label, button {
+            display: block;
+            width: 100%;
+            margin: 10px 0;
+        }
+        input[type="text"], select {
+            width: calc(100% - 20px);
+            padding: 10px;
+            margin: 10px 0;
+        }
+        button {
+            padding: 10px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .error {
+            color: red;
+        }
+        .formats {
+            margin-top: 20px;
+        }
+    </style>
 </head>
 <body>
-    <h1>YouTube Video Downloader</h1>
-    <form id="videoForm">
-        <label for="videoUrl">Enter YouTube Video URL:</label><br>
-        <input type="text" id="videoUrl" name="videoUrl" required><br><br>
-        <button type="submit">Get Video Details</button>
-    </form>
-
-    <div id="videoDetails" style="display: none;">
-        <h2>Video Details</h2>
-        <p><strong>Title:</strong> <span id="title"></span></p>
-
-        <h3>Video Formats:</h3>
-        <ul id="videoFormats"></ul>
-
-        <h3>Audio Formats:</h3>
-        <ul id="audioFormats"></ul>
-
-        <h3>Select Format to Download:</h3>
-        <select id="formatSelect"></select>
-        <br><br>
-        <button id="downloadButton">Download Selected Format</button>
+    <div id="container">
+        <h1>YouTube Downloader</h1>
+        <label for="url">YouTube Video URL:</label>
+        <input type="text" id="url" placeholder="Enter YouTube URL" required>
+        <button id="fetchQualities">Get Qualities</button>
+        <div id="error" class="error"></div>
+        <div class="formats" id="formats" style="display: none;">
+            <h2>Select Format to Download</h2>
+            <label for="quality">Available Qualities:</label>
+            <select id="quality"></select>
+            <button id="download">Download</button>
+        </div>
     </div>
 
     <script>
-        document.getElementById('videoForm').addEventListener('submit', async function(event) {
-            event.preventDefault();
-            
-            const videoUrl = document.getElementById('videoUrl').value;
-            const response = await fetch('/getQualities', {
+        document.getElementById('fetchQualities').addEventListener('click', function() {
+            const url = document.getElementById('url').value;
+            if (!url) {
+                document.getElementById('error').textContent = 'Please enter a valid YouTube URL';
+                return;
+            }
+
+            fetch('/getQualities', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ url: videoUrl })
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                document.getElementById('title').textContent = data.title;
-
-                const videoFormatsList = document.getElementById('videoFormats');
-                const audioFormatsList = document.getElementById('audioFormats');
-                const formatSelect = document.getElementById('formatSelect');
-
-                videoFormatsList.innerHTML = '';
-                audioFormatsList.innerHTML = '';
-                formatSelect.innerHTML = '';
+                body: JSON.stringify({ url })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    document.getElementById('error').textContent = data.error;
+                    return;
+                }
+                document.getElementById('error').textContent = '';
+                const formats = document.getElementById('formats');
+                const qualitySelect = document.getElementById('quality');
+                qualitySelect.innerHTML = '';
 
                 data.video_formats.forEach(format => {
-                    const li = document.createElement('li');
-                    li.textContent = `${format.resolution} - ${format.mime_type}`;
-                    videoFormatsList.appendChild(li);
-
                     const option = document.createElement('option');
-                    option.value = `video-${format.itag}`;
-                    option.textContent = `${format.resolution} - ${format.mime_type}`;
-                    formatSelect.appendChild(option);
+                    option.value = format.itag;
+                    option.textContent = `Video - ${format.resolution} (${(format.file_size / (1024 * 1024)).toFixed(2)} MB)`;
+                    qualitySelect.appendChild(option);
                 });
 
                 data.audio_formats.forEach(format => {
-                    const li = document.createElement('li');
-                    li.textContent = `${format.abr} - ${format.mime_type}`;
-                    audioFormatsList.appendChild(li);
-
                     const option = document.createElement('option');
-                    option.value = `audio-${format.itag}`;
-                    option.textContent = `${format.abr} - ${format.mime_type}`;
-                    formatSelect.appendChild(option);
+                    option.value = format.itag;
+                    option.textContent = `Audio - ${format.abr} (${(format.file_size / (1024 * 1024)).toFixed(2)} MB)`;
+                    qualitySelect.appendChild(option);
                 });
 
-                document.getElementById('videoDetails').style.display = 'block';
-            } else {
-                alert(`Error: ${data.error}`);
-            }
+                formats.style.display = 'block';
+            })
+            .catch(error => {
+                document.getElementById('error').textContent = 'An error occurred: ' + error.message;
+            });
         });
 
-        document.getElementById('downloadButton').addEventListener('click', async function() {
-            const selectedOption = document.getElementById('formatSelect').value;
-            const [type, itag] = selectedOption.split('-');
-            const videoUrl = document.getElementById('videoUrl').value;
-
-            try {
-                const response = await fetch(`/getDownloadUrl?videoUrl=${encodeURIComponent(videoUrl)}&itag=${itag}`);
-                const data = await response.json();
-
-                if (response.ok) {
-                    const downloadUrl = data.download_url;
-
-                    // Create a temporary <a> element and initiate download
-                    const a = document.createElement('a');
-                    a.style.display = 'none';
-                    a.href = downloadUrl;
-                    a.download = `${data.title}.${data.extension}`;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                } else {
-                    alert(`Error: ${data.error}`);
-                }
-            } catch (error) {
-                alert(`Error: ${error.message}`);
+        document.getElementById('download').addEventListener('click', function() {
+            const url = document.getElementById('url').value;
+            const itag = document.getElementById('quality').value;
+            if (!url || !itag) {
+                document.getElementById('error').textContent = 'Please select a format to download';
+                return;
             }
+
+            window.location.href = `/getDownloadUrl?videoUrl=${encodeURIComponent(url)}&itag=${itag}`;
         });
     </script>
 </body>
