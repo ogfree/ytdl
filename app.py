@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, jsonify, request, send_from_directory, redirect
 from pytube import YouTube
 import os
 
@@ -70,7 +70,7 @@ def get_download_url():
             return jsonify({'error': 'Stream not found'}), 404
 
         download_url = stream.url
-        return jsonify({'downloadUrl': download_url})
+        return redirect(download_url)  # Redirect to the actual video file URL
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
