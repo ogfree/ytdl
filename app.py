@@ -2,7 +2,7 @@ from flask import Flask, jsonify, request, send_from_directory, redirect, Respon
 from pytube import YouTube
 import os
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='public')
 
 # Serve index.html from the 'public' directory
 @app.route('/')
@@ -20,7 +20,7 @@ def get_qualities():
     try:
         yt = YouTube(video_url)
         title = yt.title
-        
+
         # Get all streams
         streams = yt.streams
 
@@ -71,15 +71,7 @@ def get_download_url():
 
         download_url = stream.url
 
-        # Get filename from the URL
-        filename = download_url.split('/')[-1]
-        
-        # Set response headers to force download
-        response = Response()
-        response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
-        response.headers['X-Accel-Redirect'] = download_url
-        
-        return response
+        return jsonify({'download_url': download_url})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
