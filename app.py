@@ -1,8 +1,13 @@
-from flask import Flask, jsonify, request, send_file
-import youtube_dl
+from flask import Flask, jsonify, request, send_from_directory
+from pytube import YouTube
 import os
 
 app = Flask(__name__)
+
+# Serve index.html from the 'public' directory
+@app.route('/')
+def index():
+    return send_from_directory('public', 'index.html')
 
 @app.route('/getQualities', methods=['POST'])
 def get_qualities():
@@ -13,54 +18,61 @@ def get_qualities():
         return jsonify({'error': 'Missing video URL'}), 400
 
     try:
-        ydl_opts = {
-            'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
-            'outtmpl': '%(title)s.%(ext)s',
-        }
+        yt = YouTube(video_url)
+        title = yt.title
+        
+        # Get all streams
+        streams = yt.streams.all()
 
-        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-            info_dict = ydl.extract_info(video_url, download=False)
-            formats = []
-            for format in info_dict['formats']:
-                if format.get('ext') == 'mp4':
-                    formats.append({
-                        'format_id': format['format_id'],
-                        'format_note': format['format_note'],
-                        'filesize': format['filesize'] if 'filesize' in format else None,
-                        'ext': format['ext']
-                    })
+        # Filter video streams (MP4)
+        video_streams = streams.filter(file_extension='mp4').all()
+        video_formats = []
+        for stream in video_streams:
+            video_formats.append({
+                'itag': stream.itag,
+                'resolution': stream.resolution,
+                'mime_type': stream.mime_type,
+                'file_size': stream.filesize,
+                'type': 'video'
+            })
 
-            return jsonify({'title': info_dict['title'], 'formats': formats})
+        # Filter audio streams (MP4 and WebM)
+        audio_streams = streams.filter(type='audio').all()
+        audio_formats = []
+        for stream in audio_streams:
+            audio_formats.append({
+                'itag': stream.itag,
+                'abr': stream.abr,
+                'mime_type': stream.mime_type,
+                'file_size': stream.filesize,
+                'type': 'audio'
+            })
+
+        return jsonify({
+            'title': title,
+            'video_formats': video_formats,
+            'audio_formats': audio_formats
+        })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/download', methods=['GET'])
-def download_video():
+@app.route('/getDownloadUrl', methods=['GET'])
+def get_download_url():
     video_url = request.args.get('videoUrl')
-    format_id = request.args.get('formatId')
+    itag = request.args.get('itag')
 
-    if not video_url or not format_id:
-        return jsonify({'error': 'Missing videoUrl or formatId parameter'}), 400
+    if not video_url or not itag:
+        return jsonify({'error': 'Missing videoUrl or itag parameter'}), 400
 
     try:
-        ydl_opts = {
-            'format': format_id,
-            'outtmpl': '%(title)s.%(ext)s',
-        }
+        yt = YouTube(video_url)
+        stream = yt.streams.get_by_itag(itag)
 
-        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-            info_dict = ydl.extract_info(video_url, download=False)
-            filename = f"{info_dict['title']}.{info_dict['ext']}"
-            download_url = f"/download/{filename}"
+        if not stream:
+            return jsonify({'error': 'Stream not found'}), 404
 
-            return jsonify({'downloadUrl': download_url})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/download/<filename>', methods=['GET'])
-def serve_video(filename):
-    try:
-        return send_file(filename, as_attachment=True)
+        download_url = stream.url
+        return jsonify({'downloadUrl': download_url})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
