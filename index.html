@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Downloader</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        #container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+        }
+        label, button {
+            display: block;
+            width: 100%;
+            margin: 10px 0;
+        }
+        input[type="text"], select {
+            width: calc(100% - 20px);
+            padding: 10px;
+            margin: 10px 0;
+        }
+        button {
+            padding: 10px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .error {
+            color: red;
+        }
+        .formats {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <h1>YouTube Downloader</h1>
+        <label for="url">YouTube Video URL:</label>
+        <input type="text" id="url" placeholder="Enter YouTube URL" required>
+        <button id="fetchQualities">Get Qualities</button>
+        <div id="error" class="error"></div>
+        <div class="formats" id="formats" style="display: none;">
+            <h2>Select Format to Download</h2>
+            <label for="quality">Available Qualities:</label>
+            <select id="quality"></select>
+            <button id="download">Download</button>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'https://organic-computing-machine-7v75xjv66p7j2v49-5000.app.github.dev/';  // Replace with your Flask API base URL
+
+        document.getElementById('fetchQualities').addEventListener('click', function() {
+            const url = document.getElementById('url').value;
+            if (!url) {
+                document.getElementById('error').textContent = 'Please enter a valid YouTube URL';
+                return;
+            }
+
+            fetch(`${API_BASE_URL}/getQualities`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ url })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    document.getElementById('error').textContent = data.error;
+                    return;
+                }
+                document.getElementById('error').textContent = '';
+                const formats = document.getElementById('formats');
+                const qualitySelect = document.getElementById('quality');
+                qualitySelect.innerHTML = '';
+
+                data.video_formats.forEach(format => {
+                    const option = document.createElement('option');
+                    option.value = format.itag;
+                    option.textContent = `Video - ${format.resolution} (${(format.file_size / (1024 * 1024)).toFixed(2)} MB)`;
+                    qualitySelect.appendChild(option);
+                });
+
+                data.audio_formats.forEach(format => {
+                    const option = document.createElement('option');
+                    option.value = format.itag;
+                    option.textContent = `Audio - ${format.abr} (${(format.file_size / (1024 * 1024)).toFixed(2)} MB)`;
+                    qualitySelect.appendChild(option);
+                });
+
+                formats.style.display = 'block';
+            })
+            .catch(error => {
+                document.getElementById('error').textContent = 'An error occurred: ' + error.message;
+            });
+        });
+
+        document.getElementById('download').addEventListener('click', function() {
+            const url = document.getElementById('url').value;
+            const itag = document.getElementById('quality').value;
+            if (!url || !itag) {
+                document.getElementById('error').textContent = 'Please select a format to download';
+                return;
+            }
+
+            fetch(`${API_BASE_URL}/getDownloadUrl?videoUrl=${encodeURIComponent(url)}&itag=${itag}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    document.getElementById('error').textContent = data.error;
+                    return;
+                }
+                const a = document.createElement('a');
+                a.href = data.download_url;
+                a.setAttribute('download', '');
+                a.style.display = 'none';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            })
+            .catch(error => {
+                document.getElementById('error').textContent = 'An error occurred: ' + error.message;
+            });
+        });
+    </script>
+</body>
+</html>
