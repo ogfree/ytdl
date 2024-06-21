@@ -47,6 +47,7 @@
                     const link = document.createElement('a');
                     link.href = `/getDownloadUrl?videoUrl=${encodeURIComponent(url)}&itag=${format.itag}`;
                     link.textContent = `${format.resolution} - ${format.mime_type} (${(format.file_size / (1024 * 1024)).toFixed(2)} MB)`;
+                    link.setAttribute('download', ''); // Add download attribute to force download
                     listItem.appendChild(link);
                     videoList.appendChild(listItem);
                 });
@@ -56,6 +57,7 @@
                     const link = document.createElement('a');
                     link.href = `/getDownloadUrl?videoUrl=${encodeURIComponent(url)}&itag=${format.itag}`;
                     link.textContent = `Audio - ${format.abr}kbps (${(format.file_size / (1024 * 1024)).toFixed(2)} MB)`;
+                    link.setAttribute('download', ''); // Add download attribute to force download
                     listItem.appendChild(link);
                     audioList.appendChild(listItem);
                 });
