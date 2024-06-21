@@ -48,7 +48,19 @@ app.get('/download', async (req, res) => {
         const filename = info;
 
         res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-        youtubedl(videoUrl, { format: formatId }).stdout.pipe(res);
+        res.setHeader('Content-Type', 'video/mp4');
+
+        const downloadStream = youtubedl(videoUrl, { format: formatId }).stdout;
+        downloadStream.pipe(res);
+
+        downloadStream.on('end', () => {
+            res.end();
+        });
+
+        downloadStream.on('error', (error) => {
+            res.status(500).send('Error downloading video');
+        });
+
     } catch (error) {
         res.status(500).send('Error downloading video');
     }
