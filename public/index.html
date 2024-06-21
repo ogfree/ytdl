@@ -16,7 +16,10 @@
 
     <div id="qualities" style="display: none;">
         <h2>Select Quality</h2>
-        <ul id="qualityList"></ul>
+        <h3>Video Formats</h3>
+        <ul id="videoList"></ul>
+        <h3>Audio Formats</h3>
+        <ul id="audioList"></ul>
     </div>
 
     <script src="script.js"></script> <!-- Optional: Link to custom scripts -->
@@ -34,16 +37,29 @@
 
             if (response.ok) {
                 const data = await response.json();
-                const qualityList = document.getElementById('qualityList');
-                qualityList.innerHTML = '';
-                data.formats.forEach(format => {
+                const videoList = document.getElementById('videoList');
+                const audioList = document.getElementById('audioList');
+                videoList.innerHTML = '';
+                audioList.innerHTML = '';
+
+                data.video_formats.forEach(format => {
                     const listItem = document.createElement('li');
                     const link = document.createElement('a');
-                    link.href = `/getDownloadUrl?videoUrl=${encodeURIComponent(url)}&formatId=${format.format_id}`;
-                    link.textContent = `${format.format_note} (${(format.filesize / (1024 * 1024)).toFixed(2)} MB)`;
+                    link.href = `/getDownloadUrl?videoUrl=${encodeURIComponent(url)}&itag=${format.itag}`;
+                    link.textContent = `${format.resolution} - ${format.mime_type} (${(format.file_size / (1024 * 1024)).toFixed(2)} MB)`;
                     listItem.appendChild(link);
-                    qualityList.appendChild(listItem);
+                    videoList.appendChild(listItem);
                 });
+
+                data.audio_formats.forEach(format => {
+                    const listItem = document.createElement('li');
+                    const link = document.createElement('a');
+                    link.href = `/getDownloadUrl?videoUrl=${encodeURIComponent(url)}&itag=${format.itag}`;
+                    link.textContent = `Audio - ${format.abr}kbps (${(format.file_size / (1024 * 1024)).toFixed(2)} MB)`;
+                    listItem.appendChild(link);
+                    audioList.appendChild(listItem);
+                });
+
                 document.getElementById('qualities').style.display = 'block';
             } else {
                 alert('Error fetching video qualities');
