@@ -12,24 +12,27 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
 
 app.post('/getQualities', async (req, res) => {
-    const videoUrl = req.body.url;
+    const { url } = req.body;
 
-    if (!videoUrl) {
+    if (!url) {
         return res.status(400).send('Missing video URL');
     }
 
     try {
-        const info = await youtubedl(videoUrl, { dumpJson: true });
+        const info = await youtubedl(url, { dumpJson: true });
 
-        const formats = info.formats.map(format => ({
-            format_id: format.format_id,
-            format_note: format.format_note,
-            filesize: format.filesize,
-            ext: format.ext,
-        })).filter(format => format.format_note && format.ext === 'mp4');
+        const formats = info.formats
+            .filter(format => format.ext === 'mp4')
+            .map(format => ({
+                format_id: format.format_id,
+                format_note: format.format_note,
+                filesize: format.filesize,
+                ext: format.ext,
+            }));
 
         res.json({ title: info.title, formats });
     } catch (error) {
+        console.error('Error fetching video info:', error);
         res.status(500).send('Error fetching video info');
     }
 });
@@ -55,27 +58,20 @@ app.get('/download', async (req, res) => {
         res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
         res.setHeader('Content-Type', 'video/mp4');
 
-        result.stdout.pipe(fs.createWriteStream(filePath));
+        const fileStream = fs.createReadStream(filePath);
+        fileStream.pipe(res);
 
-        result.on('end', async () => {
-            await promisify(fs.access)(filePath, fs.constants.F_OK);
-            const fileStream = fs.createReadStream(filePath);
-            fileStream.pipe(res);
-
-            fileStream.on('end', async () => {
-                await promisify(fs.unlink)(filePath);
-            });
-
-            fileStream.on('error', (error) => {
-                res.status(500).send('Error downloading video');
-            });
+        fileStream.on('end', async () => {
+            await promisify(fs.unlink)(filePath);
         });
 
-        result.on('error', (error) => {
-            res.status(500).send('Error downloading video');
+        fileStream.on('error', (error) => {
+            console.error('Error reading video file:', error);
+            res.status(500).send('Error streaming video');
         });
 
     } catch (error) {
+        console.error('Error downloading video:', error);
         res.status(500).send('Error downloading video');
     }
 });
