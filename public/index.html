@@ -119,7 +119,21 @@
                 return;
             }
 
-            window.location.href = `/getDownloadUrl?videoUrl=${encodeURIComponent(url)}&itag=${itag}`;
+            fetch(`/getDownloadUrl?videoUrl=${encodeURIComponent(url)}&itag=${itag}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    document.getElementById('error').textContent = data.error;
+                    return;
+                }
+                const a = document.createElement('a');
+                a.href = data.download_url;
+                a.download = '';
+                a.click();
+            })
+            .catch(error => {
+                document.getElementById('error').textContent = 'An error occurred: ' + error.message;
+            });
         });
     </script>
 </body>
