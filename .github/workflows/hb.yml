@@ -3,7 +3,7 @@ name: Keep Codespace Active
 on:
   schedule:
     # Schedule a "ping" every 15 minutes to keep the Codespace awake
-    - cron: "*/15 * * * *"  # Adjust as needed (every 15 minutes here)
+    - cron: "*/1 * * * *"  # Adjust as needed (every 15 minutes here)
 
 jobs:
   keep-alive:
