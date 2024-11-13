@@ -1,0 +1,16 @@
+name: Keep Codespace Active
+
+on:
+  schedule:
+    # Schedule a "ping" every 15 minutes to keep the Codespace awake
+    - cron: "*/15 * * * *"  # Adjust as needed (every 15 minutes here)
+
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Send Keep-Alive Ping
+        run: |
+          # Replace <your-codespace-url> with the actual URL of your Codespace API
+          curl -I https://ideal-potato-x5pxr4q6v4f9q5j.github.dev/
